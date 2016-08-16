@@ -46,7 +46,7 @@ if(count($gui->reqIDs) > 0)
   $status_labels = init_labels($cfg->req->status_labels);
   
   $labels2get = array('no' => 'No', 'yes' => 'Yes', 'not_aplicable' => null,'never' => null,
-                      'req_spec_short' => null,'title' => null, 'version' => null, 'th_coverage' => null,
+                      'req_spec_short' => null,'title' => null, 'version' => null, 'th_coverage' => null, 'th_autocoverage' => null,
                       'frozen' => null, 'type'=> null,'status' => null,'th_relations' => null, 'requirements' => null,
                       'number_of_reqs' => null, 'number_of_versions' => null, 'requirement' => null,
                       'version_revision_tag' => null, 'week_short' => 'calendar_week_short');
@@ -58,6 +58,7 @@ if(count($gui->reqIDs) > 0)
 
 
   $coverageSet = null;
+  $autoCoverageSet = null;
   $relationCounters = null;
 
   $version_option = ($args->all_versions) ? requirement_mgr::ALL_VERSIONS : requirement_mgr::LATEST_VERSION; 
@@ -76,6 +77,8 @@ if(count($gui->reqIDs) > 0)
   {
     $coverageSet = $req_mgr->getCoverageCounterSet($gui->reqIDs);
   }
+
+  $autoCoverageSet = $req_mgr->getAutoCoverageCounterSet($gui->reqIDs);
 
   if($cfg->req->relations->enable) 
   {
@@ -130,10 +133,11 @@ if(count($gui->reqIDs) > 0)
         * 3. version
         * 4. frozen (is_open attribute)
         * 5. coverage (if enabled)
-        * 6. type
-        * 7. status
-        * 8. relations (if enabled)
-        * 9. all custom fields in order of $fields
+        * 6. auto coverage
+        * 7. type
+        * 8. status
+        * 9. relations (if enabled)
+        * 10. all custom fields in order of $fields
         */
         
       $result[] = $pathCache[$req[0]['srs_id']];
@@ -190,6 +194,17 @@ if(count($gui->reqIDs) > 0)
         }
         $result[] = $coverage_string;
       }
+
+      $tc_autoCoverage = isset($autoCoverageSet[$id]) ? $autoCoverageSet[$id]['qty'] : 0;
+      $expected = $version['expected_coverage'];
+      $autoCoverage_string = "<!-- -1 -->" . $labels['not_aplicable'] . " ($tc_autoCoverage/0)";
+      if ($expected > 0) 
+      {
+        $percentage = round(100 / $expected * $tc_autoCoverage, 2);
+        $padded_data = sprintf("%010d", $percentage); //bring all percentages to same length
+        $autoCoverage_string = "<!-- $padded_data --> {$percentage}% ({$tc_autoCoverage}/{$expected})";
+      }
+      $result[] = $autoCoverage_string;
         
       $result[] = isset($type_labels[$version['type']]) ? $type_labels[$version['type']] : '';
       $result[] = isset($status_labels[$version['status']]) ? $status_labels[$version['status']] : '';
@@ -199,7 +214,6 @@ if(count($gui->reqIDs) > 0)
         $rx = isset($relationCounters[$id]) ? $relationCounters[$id] : 0;
         $result[] = "<!-- " . str_pad($rx,10,'0') . " -->" . $rx;
       }
-     
       
       if($gui->processCF)
       {
@@ -244,10 +258,11 @@ if(count($gui->reqIDs) > 0)
      * 3. version
      * 4. frozen
      * 5. coverage (if enabled)
-     * 6. type
-     * 7. status
-     * 8. relations (if enabled)
-     * 9. then all custom fields in order of $fields
+     * 6. auto coverage
+     * 7. type
+     * 8. status
+     * 9. relations (if enabled)
+     * 10. then all custom fields in order of $fields
      */
     $columns = array();
     $columns[] = array('title_key' => 'req_spec_short', 'width' => 200);
@@ -264,6 +279,8 @@ if(count($gui->reqIDs) > 0)
     {
       $columns[] = array('title_key' => 'th_coverage', 'width' => 80);
     }
+	
+	$columns[] = array('title_key' => 'th_autocoverage', 'width' => 80);
               
     $columns[] = array('title_key' => 'type', 'width' => 60, 'filter' => 'list',
                        'filterOptions' => $type_labels);

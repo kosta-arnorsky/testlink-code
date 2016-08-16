@@ -3933,6 +3933,29 @@ function getCoverageCounterSet($itemSet)
 }
 
 
+/**
+ *
+ * @internal revisions
+ * @since 
+ */
+function getAutoCoverageCounterSet($itemSet)
+{
+  $debugMsg = 'Class:' . __CLASS__ . ' - Method: ' . __FUNCTION__;
+  $sql = "/* $debugMsg */ " . 
+           " SELECT RC.req_id, COUNT(0) AS qty " .
+           " FROM {$this->tables['req_coverage']} RC " .
+           " JOIN {$this->tables['nodes_hierarchy']} NH_TC ON NH_TC.id = RC.testcase_id " .
+           " JOIN {$this->tables['nodes_hierarchy']} NH_TCV ON NH_TCV.parent_id = NH_TC.id " .
+           " JOIN {$this->tables['tcversions']} TCV ON TCV.id = NH_TCV.id " .
+           " WHERE RC.req_id IN (" . implode(',', $itemSet) . ") " .
+           " AND TCV.execution_type = 2 " . // Auto
+           " GROUP BY RC.req_id";
+
+  $rs = $this->db->fetchRowsIntoMap($sql,'req_id');
+  return $rs;
+}
+
+
   /**
    *
    * @internal revisions
