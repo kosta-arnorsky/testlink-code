@@ -3949,6 +3949,7 @@ function getAutoCoverageCounterSet($itemSet)
            " JOIN {$this->tables['tcversions']} TCV ON TCV.id = NH_TCV.id " .
            " WHERE RC.req_id IN (" . implode(',', $itemSet) . ") " .
            " AND TCV.execution_type = 2 " . // Auto
+           " AND TCV.status = 1 " . // ???
            " GROUP BY RC.req_id";
 
   $rs = $this->db->fetchRowsIntoMap($sql,'req_id');
