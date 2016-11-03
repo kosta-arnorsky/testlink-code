@@ -45,6 +45,7 @@
   <input type="hidden"
          name="all_versions_hidden"
          value="{$gui->all_versions}" />
+  <a href="lib/requirements/reqOverview.php?export=csv" target="_blank">Export</a>
   </form></p><br/>
   
   {foreach from=$gui->tableSet key=idx item=matrix}

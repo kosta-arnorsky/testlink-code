@@ -87,6 +87,7 @@ if(count($gui->reqIDs) > 0)
 
   // array to gather table data row per row
   $rows = array();    
+  $rowsExport = array();    
  
   foreach($gui->reqIDs as $id) 
   {
@@ -121,6 +122,7 @@ if(count($gui->reqIDs) > 0)
     {
       // get content for each row to display
       $result = array();
+      $resultExport = array();
         
       /**
         * IMPORTANT: 
@@ -141,11 +143,13 @@ if(count($gui->reqIDs) > 0)
         */
         
       $result[] = $pathCache[$req[0]['srs_id']];
+      $resultExport[] = $pathCache[$req[0]['srs_id']];
         
       $edit_link = '<a href="javascript:openLinkedReqVersionWindow(' . $id . ',' . $version['version_id'] . ')">' . 
                    '<img title="' .$labels['requirement'] . '" src="' . $imgSet['edit'] . '" /></a> ';
       
       $result[] =  '<!-- ' . $title . ' -->' . $edit_link . $title;
+      $resultExport[] = $title;
         
       // version and revision number
       // $version_revision = sprintf($labels['version_revision_tag'],$version['version'],$version['revision']);
@@ -155,10 +159,12 @@ if(count($gui->reqIDs) > 0)
       // USE CARVED IN THE STONE [vxxsyy] to save function calls.
       $result[] = "<!-- " . sprintf("%05d%05d", $version['version'], $version['revision']) . "-->" .
                   "[v{$version['version']}r{$version['revision']}]";
+      $resultExport[] = "[v{$version['version']}r{$version['revision']}]";
           
       // use html comment to sort properly by this columns (extjs)
       $result[] = "<!--{$version['creation_ts']}-->" . localizeTimeStamp($version['creation_ts'],$cfg->datetime) . 
                     " ({$version['author']})";
+      $resultExport[] = localizeTimeStamp($version['creation_ts'],$cfg->datetime) . " ({$version['author']})";
       
       // 20140914 - 
       // Because we can do this logic thoundands of times, I suppose it will cost less
@@ -169,15 +175,18 @@ if(count($gui->reqIDs) > 0)
       {
         $result[] = "<!--{$version['modification_ts']}-->" . localizeTimeStamp($version['modification_ts'],$cfg->datetime) . 
                     " ({$version['modifier']})";
+        $resultExport[] = localizeTimeStamp($version['modification_ts'],$cfg->datetime) . " ({$version['modifier']})";
       }
       else
       {
         $result[] = "<!-- 0 -->" . $labels['never'];  
+        $resultExport[] = $labels['never'];  
       }  
         
         
       // is it frozen?
       $result[] = ($version['is_open']) ? $labels['no'] : $labels['yes'];
+      $resultExport[] = ($version['is_open']) ? $labels['no'] : $labels['yes'];
         
       // coverage
       // use html comment to sort properly by this columns (extjs)
@@ -186,33 +195,43 @@ if(count($gui->reqIDs) > 0)
         $tc_coverage = isset($coverageSet[$id]) ? $coverageSet[$id]['qty'] : 0;
         $expected = $version['expected_coverage'];
         $coverage_string = "<!-- -1 -->" . $labels['not_aplicable'] . " ($tc_coverage/0)";
+        $coverage_stringExport = $labels['not_aplicable'] . " ($tc_coverage/0)";
         if ($expected > 0) 
         {
           $percentage = round(100 / $expected * $tc_coverage, 2);
           $padded_data = sprintf("%010d", $percentage); //bring all percentages to same length
           $coverage_string = "<!-- $padded_data --> {$percentage}% ({$tc_coverage}/{$expected})";
+          $coverage_stringExport = "{$percentage}% ({$tc_coverage}/{$expected})";
         }
         $result[] = $coverage_string;
+        $resultExport[] = $coverage_stringExport;
       }
 
       $tc_autoCoverage = isset($autoCoverageSet[$id]) ? $autoCoverageSet[$id]['qty'] : 0;
       $expected = $version['expected_coverage'];
       $autoCoverage_string = "<!-- -1 -->" . $labels['not_aplicable'] . " ($tc_autoCoverage/0)";
+      $autoCoverage_stringExport = $labels['not_aplicable'] . " ($tc_autoCoverage/0)";
       if ($expected > 0) 
       {
         $percentage = round(100 / $expected * $tc_autoCoverage, 2);
         $padded_data = sprintf("%010d", $percentage); //bring all percentages to same length
-        $autoCoverage_string = "<!-- $padded_data --> {$percentage}% ({$tc_autoCoverage}/{$expected})";
+        //$autoCoverage_string = "<!-- $padded_data --> {$percentage}% ({$tc_autoCoverage}/{$expected})";
+        $autoCoverage_string = "<!-- $padded_data --> {$percentage}%";
+        $autoCoverage_stringExport = "{$percentage}%";
       }
       $result[] = $autoCoverage_string;
+      $resultExport[] = $autoCoverage_stringExport;
         
       $result[] = isset($type_labels[$version['type']]) ? $type_labels[$version['type']] : '';
+      $resultExport[] = isset($type_labels[$version['type']]) ? $type_labels[$version['type']] : '';
       $result[] = isset($status_labels[$version['status']]) ? $status_labels[$version['status']] : '';
+      $resultExport[] = isset($status_labels[$version['status']]) ? $status_labels[$version['status']] : '';
       
       if ($cfg->req->relations->enable) 
       {
         $rx = isset($relationCounters[$id]) ? $relationCounters[$id] : 0;
         $result[] = "<!-- " . str_pad($rx,10,'0') . " -->" . $rx;
+        $resultExport[] = $rx;
       }
       
       if($gui->processCF)
@@ -229,10 +248,12 @@ if(count($gui->reqIDs) > 0)
             $value = strftime( $cfg->$verbose_type . " ({$label['week_short']} %W)" , $value);
           }  
           $result[] = $value;
+          $resultExport[] = $value;
         }
       }  
         
       $rows[] = $result;
+      $rowsExport[] = $resultExport;
     }
   }
     
@@ -327,8 +348,34 @@ if(count($gui->reqIDs) > 0)
 } 
 
 
-$smarty->assign('gui',$gui);
-$smarty->display($templateCfg->template_dir . $templateCfg->default_template);
+switch($_GET['export'])
+{
+	case 'csv':
+		$columnNames = array();
+		foreach ($columns as $column)
+		{
+			$columnNames[] = isset($column['title']) ? $column['title'] : lang_get($column['title_key']);
+		}
+		
+		header('Content-Type: text/csv; charset=utf-8');
+		header('Content-Disposition: attachment; filename='.date("Ymd_His").'_requirements.csv');
+		
+		// create a file pointer connected to the output stream
+		$output = fopen('php://output', 'w');
+		// output the column headings
+		fputcsv($output, $columnNames);
+		foreach ($rowsExport as $row)
+		{
+			fputcsv($output, $row);
+		}
+
+		//var_dump($columnNames);
+		//var_dump($rowsExport);
+		break;
+	default:
+		$smarty->assign('gui',$gui);
+		$smarty->display($templateCfg->template_dir . $templateCfg->default_template);
+}
 
 
 /**
