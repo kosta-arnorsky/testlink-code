@@ -3940,17 +3940,35 @@ function getCoverageCounterSet($itemSet)
  */
 function getAutoCoverageCounterSet($itemSet)
 {
+  /*
+  $sql =
+           " SELECT rec_case.req_id, COUNT(0) AS qty " .
+           " FROM (SELECT RC.req_id, MAX(TCV.id) AS tcversion_id" .
+           "     FROM {$this->tables['req_coverage']} RC " .
+           "     JOIN {$this->tables['nodes_hierarchy']} NH_TC ON NH_TC.id = RC.testcase_id " .
+           "     JOIN {$this->tables['nodes_hierarchy']} NH_TCV ON NH_TCV.parent_id = NH_TC.id " .
+           "     JOIN {$this->tables['tcversions']} TCV ON TCV.id = NH_TCV.id " .
+           "     WHERE RC.req_id IN (" . implode(',', $itemSet) . ") " .
+           "     GROUP BY RC.req_id, RC.testcase_id) AS rec_case" .
+           " JOIN {$this->tables['tcversions']} TCV ON TCV.id = rec_case.tcversion_id " .
+		   " WHERE TCV.execution_type = 2 " . // Auto
+		   " GROUP BY rec_case.req_id";
+  var_dump( $this->db->get_recordset($sql));
+  */
+
   $debugMsg = 'Class:' . __CLASS__ . ' - Method: ' . __FUNCTION__;
   $sql = "/* $debugMsg */ " . 
-           " SELECT RC.req_id, COUNT(0) AS qty " .
-           " FROM {$this->tables['req_coverage']} RC " .
-           " JOIN {$this->tables['nodes_hierarchy']} NH_TC ON NH_TC.id = RC.testcase_id " .
-           " JOIN {$this->tables['nodes_hierarchy']} NH_TCV ON NH_TCV.parent_id = NH_TC.id " .
-           " JOIN {$this->tables['tcversions']} TCV ON TCV.id = NH_TCV.id " .
-           " WHERE RC.req_id IN (" . implode(',', $itemSet) . ") " .
-           " AND TCV.execution_type = 2 " . // Auto
-           " AND TCV.status = 1 " . // ???
-           " GROUP BY RC.req_id";
+           " SELECT rec_case.req_id, COUNT(0) AS qty " .
+           " FROM (SELECT RC.req_id, MAX(TCV.id) AS tcversion_id" .
+           "     FROM {$this->tables['req_coverage']} RC " .
+           "     JOIN {$this->tables['nodes_hierarchy']} NH_TC ON NH_TC.id = RC.testcase_id " .
+           "     JOIN {$this->tables['nodes_hierarchy']} NH_TCV ON NH_TCV.parent_id = NH_TC.id " .
+           "     JOIN {$this->tables['tcversions']} TCV ON TCV.id = NH_TCV.id " .
+           "     WHERE RC.req_id IN (" . implode(',', $itemSet) . ") " .
+           "     GROUP BY RC.req_id, RC.testcase_id) AS rec_case" .
+           " JOIN {$this->tables['tcversions']} TCV ON TCV.id = rec_case.tcversion_id " .
+		   " WHERE TCV.execution_type = 2 " . // Auto
+		   " GROUP BY rec_case.req_id";
 
   $rs = $this->db->fetchRowsIntoMap($sql,'req_id');
   return $rs;
