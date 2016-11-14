@@ -46,8 +46,8 @@ if(count($gui->reqIDs) > 0)
   $status_labels = init_labels($cfg->req->status_labels);
   
   $labels2get = array('no' => 'No', 'yes' => 'Yes', 'not_aplicable' => null,'never' => null,
-                      'req_spec_short' => null,'title' => null, 'version' => null, 'th_coverage' => null, 'th_autocoverage' => null,
-                      'frozen' => null, 'type'=> null,'status' => null,'th_relations' => null, 'requirements' => null,
+                      'req_spec_short' => null,'title' => null, 'version' => null, 'th_coverage' => null, 'th_autocoverage' => null, 'th_regressioncoverage' => null,
+                      'th_regressionautocoverage' => null, 'frozen' => null, 'type'=> null,'status' => null,'th_relations' => null, 'requirements' => null,
                       'number_of_reqs' => null, 'number_of_versions' => null, 'requirement' => null,
                       'version_revision_tag' => null, 'week_short' => 'calendar_week_short');
           
@@ -58,7 +58,6 @@ if(count($gui->reqIDs) > 0)
 
 
   $coverageSet = null;
-  $autoCoverageSet = null;
   $relationCounters = null;
 
   $version_option = ($args->all_versions) ? requirement_mgr::ALL_VERSIONS : requirement_mgr::LATEST_VERSION; 
@@ -79,6 +78,8 @@ if(count($gui->reqIDs) > 0)
   }
 
   $autoCoverageSet = $req_mgr->getAutoCoverageCounterSet($gui->reqIDs);
+  $regressionCoverageSet = $req_mgr->getRegressionCoverageCounterSet($gui->reqIDs);
+  $regressionAutoCoverageSet = $req_mgr->getRegressionAutoCoverageCounterSet($gui->reqIDs);
 
   if($cfg->req->relations->enable) 
   {
@@ -209,18 +210,43 @@ if(count($gui->reqIDs) > 0)
 
       $tc_autoCoverage = isset($autoCoverageSet[$id]) ? $autoCoverageSet[$id]['qty'] : 0;
       $expected = $version['expected_coverage'];
-      $autoCoverage_string = "<!-- -1 -->" . $labels['not_aplicable'] . " ($tc_autoCoverage/0)";
-      $autoCoverage_stringExport = $labels['not_aplicable'] . " ($tc_autoCoverage/0)";
+      $autoCoverage_string = "<!-- -1 -->" . $labels['not_aplicable'];
+      $autoCoverage_stringExport = $labels['not_aplicable'];
       if ($expected > 0) 
       {
         $percentage = round(100 / $expected * $tc_autoCoverage, 2);
         $padded_data = sprintf("%010d", $percentage); //bring all percentages to same length
-        //$autoCoverage_string = "<!-- $padded_data --> {$percentage}% ({$tc_autoCoverage}/{$expected})";
         $autoCoverage_string = "<!-- $padded_data --> {$percentage}%";
         $autoCoverage_stringExport = "{$percentage}%";
       }
       $result[] = $autoCoverage_string;
       $resultExport[] = $autoCoverage_stringExport;
+
+      $tc_regressionCoverage = isset($regressionCoverageSet[$id]) ? $regressionCoverageSet[$id]['qty'] : 0;	  
+      $regressionCoverage_string = "<!-- -1 -->" . $labels['not_aplicable'] . " ($tc_regressionCoverage/0)";
+      $regressionCoverage_stringExport = $labels['not_aplicable'] . " ($tc_regressionCoverage/0)";
+      if ($expected > 0) 
+      {
+        $percentage = round(100 / $expected * $tc_regressionCoverage, 2);
+        $padded_data = sprintf("%010d", $percentage); //bring all percentages to same length
+        $regressionCoverage_string = "<!-- $padded_data --> {$percentage}% ({$tc_regressionCoverage}/{$expected})";
+        $regressionCoverage_stringExport = "{$percentage}% ({$tc_regressionCoverage}/{$expected})";
+      }
+      $result[] = $regressionCoverage_string;
+      $resultExport[] = $regressionCoverage_stringExport;
+
+      $tc_regressionAutoCoverage = isset($regressionAutoCoverageSet[$id]) ? $regressionAutoCoverageSet[$id]['qty'] : 0;
+      $regressionAutoCoverage_string = "<!-- -1 --> 0%";
+      $regressionAutoCoverage_stringExport = "0%";
+      if ($tc_regressionCoverage > 0) 
+      {
+        $percentage = round(100 / $tc_regressionCoverage * $tc_regressionAutoCoverage, 2);
+        $padded_data = sprintf("%010d", $percentage); //bring all percentages to same length
+        $regressionAutoCoverage_string = "<!-- $padded_data --> {$percentage}%";
+        $regressionAutoCoverage_stringExport = "{$percentage}%";
+      }
+      $result[] = $regressionAutoCoverage_string;
+      $resultExport[] = $regressionAutoCoverage_stringExport;
         
       $result[] = isset($type_labels[$version['type']]) ? $type_labels[$version['type']] : '';
       $resultExport[] = isset($type_labels[$version['type']]) ? $type_labels[$version['type']] : '';
@@ -280,10 +306,12 @@ if(count($gui->reqIDs) > 0)
      * 4. frozen
      * 5. coverage (if enabled)
      * 6. auto coverage
-     * 7. type
-     * 8. status
-     * 9. relations (if enabled)
-     * 10. then all custom fields in order of $fields
+     * 7. regression coverage
+     * 8. regression auto coverage
+     * 9. type
+     * 10. status
+     * 11. relations (if enabled)
+     * 12. then all custom fields in order of $fields
      */
     $columns = array();
     $columns[] = array('title_key' => 'req_spec_short', 'width' => 200);
@@ -302,6 +330,10 @@ if(count($gui->reqIDs) > 0)
     }
 	
 	$columns[] = array('title_key' => 'th_autocoverage', 'width' => 80);
+	
+	$columns[] = array('title_key' => 'th_regressioncoverage', 'width' => 80);
+	
+	$columns[] = array('title_key' => 'th_regressionautocoverage', 'width' => 80);
               
     $columns[] = array('title_key' => 'type', 'width' => 60, 'filter' => 'list',
                        'filterOptions' => $type_labels);

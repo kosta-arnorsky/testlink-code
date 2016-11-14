@@ -3953,7 +3953,8 @@ function getAutoCoverageCounterSet($itemSet)
            " JOIN {$this->tables['tcversions']} TCV ON TCV.id = rec_case.tcversion_id " .
 		   " WHERE TCV.execution_type = 2 " . // Auto
 		   " GROUP BY rec_case.req_id";
-  var_dump( $this->db->get_recordset($sql));
+  var_dump($sql);
+  var_dump($this->db->get_recordset($sql));
   */
 
   $debugMsg = 'Class:' . __CLASS__ . ' - Method: ' . __FUNCTION__;
@@ -3968,6 +3969,58 @@ function getAutoCoverageCounterSet($itemSet)
            "     GROUP BY RC.req_id, RC.testcase_id) AS rec_case" .
            " JOIN {$this->tables['tcversions']} TCV ON TCV.id = rec_case.tcversion_id " .
 		   " WHERE TCV.execution_type = 2 " . // Auto
+		   " GROUP BY rec_case.req_id";
+
+  $rs = $this->db->fetchRowsIntoMap($sql,'req_id');
+  return $rs;
+}
+
+
+/**
+ *
+ * @internal revisions
+ * @since 
+ */
+function getRegressionCoverageCounterSet($itemSet)
+{
+  $debugMsg = 'Class:' . __CLASS__ . ' - Method: ' . __FUNCTION__;
+  $sql = "/* $debugMsg */ " . 
+           " SELECT RC.req_id, COUNT(0) AS qty " .
+           " FROM {$this->tables['req_coverage']} RC " .
+		   " WHERE EXISTS(SELECT 1 FROM {$this->tables['testcase_keywords']} TCKW " .
+		   "		JOIN {$this->tables['keywords']} KW ON TCKW.keyword_id = KW.id " .
+		   "	WHERE TCKW.testcase_id = RC.testcase_id " .
+		   "		AND (KW.keyword = 'Regression' OR KW.keyword = 'Current version')) " .
+		   " GROUP BY RC.req_id";
+
+  $rs = $this->db->fetchRowsIntoMap($sql,'req_id');
+  return $rs;
+}
+
+
+/**
+ *
+ * @internal revisions
+ * @since 
+ */
+function getRegressionAutoCoverageCounterSet($itemSet)
+{
+  $debugMsg = 'Class:' . __CLASS__ . ' - Method: ' . __FUNCTION__;
+  $sql = "/* $debugMsg */ " . 
+           " SELECT rec_case.req_id, COUNT(0) AS qty " .
+           " FROM (SELECT RC.req_id, RC.testcase_id, MAX(TCV.id) AS tcversion_id" .
+           "     FROM {$this->tables['req_coverage']} RC " .
+           "     JOIN {$this->tables['nodes_hierarchy']} NH_TC ON NH_TC.id = RC.testcase_id " .
+           "     JOIN {$this->tables['nodes_hierarchy']} NH_TCV ON NH_TCV.parent_id = NH_TC.id " .
+           "     JOIN {$this->tables['tcversions']} TCV ON TCV.id = NH_TCV.id " .
+           "     WHERE RC.req_id IN (" . implode(',', $itemSet) . ") " .
+           "     GROUP BY RC.req_id, RC.testcase_id) AS rec_case" .
+           " JOIN {$this->tables['tcversions']} TCV ON TCV.id = rec_case.tcversion_id " .
+		   " WHERE TCV.execution_type = 2 " . // Auto
+		   "	AND EXISTS(SELECT 1 FROM {$this->tables['testcase_keywords']} TCKW " .
+		   "			JOIN {$this->tables['keywords']} KW ON TCKW.keyword_id = KW.id " .
+		   "		WHERE TCKW.testcase_id = rec_case.testcase_id " .
+		   "			AND (KW.keyword = 'Regression' OR KW.keyword = 'Current version')) " .
 		   " GROUP BY rec_case.req_id";
 
   $rs = $this->db->fetchRowsIntoMap($sql,'req_id');
